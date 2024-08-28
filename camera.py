@@ -5,7 +5,7 @@ import collections
 import os
 
 FPS = 30
-save_dir = 'Dataset_'
+save_dir = 'Dataset_0826'
 
 buffer1 = collections.deque(maxlen=60)
 buffer2 = collections.deque(maxlen=60)
@@ -28,7 +28,7 @@ def capture_camera_1():
             timestamp = time.time()
             with buffer_lock:
                 buffer1.append((frame, timestamp))
-            print("108 time =", timestamp)
+            # print("108 time =", timestamp)
         else:
             print("Reconnecting to camera 1...")
             cap1.release()
@@ -42,7 +42,7 @@ def capture_camera_2():
             timestamp = time.time()
             with buffer_lock:
                 buffer2.append((frame, timestamp))
-            print("109 time =", timestamp)
+            # print("109 time =", timestamp)
         else:
             print("Reconnecting to camera 2...")
             cap2.release()
@@ -98,7 +98,7 @@ out2 = None
 
 last_timestamp1 = None
 last_timestamp2 = None
-
+recording = False
 try:
     while True:
         with buffer_lock:
@@ -113,12 +113,10 @@ try:
                     while buffer2 and buffer2[0][1] <= timestamp2:
                         buffer2.popleft()
 
-                    print(f"Synced frames at time {timestamp1} and {timestamp2}, diff = {abs(timestamp1 - timestamp2)}")
+                    # print(f"Synced frames at time {timestamp1} and {timestamp2}, diff = {abs(timestamp1 - timestamp2)}")
             
         if buffer3:
             synced_frame1, synced_frame2, timestamp1, timestamp2 = buffer3.popleft()
-
-            # combined_frame = cv2.hconcat([synced_frame1, synced_frame2])
 
             resized_frame1 = cv2.resize(synced_frame1, (0, 0), fx=0.5, fy=0.5)
             resized_frame2 = cv2.resize(synced_frame2, (0, 0), fx=0.5, fy=0.5)
@@ -127,6 +125,7 @@ try:
 
             cv2.imshow('Synchronized Frames', combined_frame)
 
+            # if recording == True:
             if out1 is None:
                 latest_number1 += 1
                 out1 = cv2.VideoWriter(os.path.join(save_dir1, f'{latest_number1:03d}-1.mp4'), fourcc, FPS, (synced_frame1.shape[1], synced_frame1.shape[0]))
@@ -149,6 +148,11 @@ try:
             
             last_timestamp1 = timestamp1
             last_timestamp2 = timestamp2
+
+        # key = cv2.waitKey(1) & 0xFF
+        # if key == ord(' '):
+        #     recording = not recording
+        #     print(f"Recording = {recording}")
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             running = False
