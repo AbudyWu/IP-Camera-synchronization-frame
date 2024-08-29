@@ -3,6 +3,7 @@ import threading
 from time import sleep
 from queue import Queue
 
+
 class CameraSync:
     def __init__(self, cam1_url: str, cam2_url: str, max_queue_size=2):
         self.cap1 = cv2.VideoCapture(cam1_url)
@@ -50,6 +51,7 @@ class CameraSync:
         self.cap1.release()
         self.cap2.release()
 
+
 if __name__ == "__main__":
     str1 = "rtsp://admin:sp123456@192.168.1.108/"
     str2 = "rtsp://admin:sp123456@192.168.1.109/"
@@ -66,15 +68,22 @@ if __name__ == "__main__":
             resized_frame109 = cv2.resize(frame109, (0, 0), fx=0.5, fy=0.5)
             combined_frame = cv2.hconcat([resized_frame108, resized_frame109])
             cv2.imshow("Combined Frame", combined_frame)
+
             current_time = cv2.getTickCount()
             time_interval = (current_time - prev_time) / cv2.getTickFrequency()
             fps = 1 / time_interval
             prev_time = current_time
-            
-            cv2.putText(combined_frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+            cv2.putText(
+                combined_frame,
+                f"FPS: {fps:.2f}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+            )
             cv2.imshow("Combined Frame", combined_frame)
-        # else:
-        #     print("Cannot get frames")
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
