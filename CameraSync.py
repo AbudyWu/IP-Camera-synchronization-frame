@@ -1,11 +1,14 @@
 import cv2
+import time
 import threading
+from threading import Thread
 from time import sleep
 from queue import Queue
 
 
-class CameraSync:
+class CameraSyncThread(Thread):
     def __init__(self, cam1_url: str, cam2_url: str, max_queue_size=2):
+        super().__init__()
         self.cap1 = cv2.VideoCapture(cam1_url)
         self.cap2 = cv2.VideoCapture(cam2_url)
         self.max_queue_size = max_queue_size
@@ -15,6 +18,7 @@ class CameraSync:
         self.frame2 = None
         self.isActive = True
         self._initialize_cameras()
+        self.start()
 
     def _initialize_cameras(self):
         self.cap1.set(cv2.CAP_PROP_BUFFERSIZE, 2)
@@ -34,7 +38,7 @@ class CameraSync:
                 self.__synchronize_queues(q)
                 if q.qsize() < self.max_queue_size:
                     q.put(frame)
-        sleep(1 / (15 * 2))
+        # sleep(1 / (15 * 2))
 
     def update_frames(self):
         if not self.q1.empty() and not self.q2.empty():
@@ -46,6 +50,14 @@ class CameraSync:
     def get_frames(self):
         return self.frame1, self.frame2
 
+    def run(self):
+        while self.isActive:
+            start_time = time.time()
+            self.update_frames()
+            elapsed_time = time.time() - start_time
+            sleep_time = max(0, (1 / 30) - elapsed_time)
+            time.sleep(sleep_time)
+
     def release(self):
         self.isActive = False
         self.cap1.release()
@@ -55,34 +67,14 @@ class CameraSync:
 if __name__ == "__main__":
     str1 = "rtsp://admin:sp123456@192.168.1.108/"
     str2 = "rtsp://admin:sp123456@192.168.1.109/"
-    camera_sync = CameraSync(str1, str2)
-
-    prev_time = cv2.getTickCount()
-    fps = 0
+    camera_sync = CameraSyncThread(str1, str2)
 
     while True:
-        camera_sync.update_frames()
         frame108, frame109 = camera_sync.get_frames()
         if frame108 is not None and frame109 is not None:
             resized_frame108 = cv2.resize(frame108, (0, 0), fx=0.5, fy=0.5)
             resized_frame109 = cv2.resize(frame109, (0, 0), fx=0.5, fy=0.5)
             combined_frame = cv2.hconcat([resized_frame108, resized_frame109])
-            cv2.imshow("Combined Frame", combined_frame)
-
-            current_time = cv2.getTickCount()
-            time_interval = (current_time - prev_time) / cv2.getTickFrequency()
-            fps = 1 / time_interval
-            prev_time = current_time
-
-            cv2.putText(
-                combined_frame,
-                f"FPS: {fps:.2f}",
-                (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2,
-            )
             cv2.imshow("Combined Frame", combined_frame)
 
         key = cv2.waitKey(1) & 0xFF
